@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitGrade AI - Repository Intelligence Engine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background: #00040f;
+            color: #e2e8f0;
+            overflow-x: hidden;
+        }
+        .glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 255, 150, 0.3);
+        }
+        .glow-cyan { 
+            box-shadow: 0 0 20px rgba(0, 255, 150, 0.4);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glow-cyan:hover { 
+            box-shadow: 0 0 40px rgba(0, 255, 150, 0.7);
+            transform: translateY(-4px);
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #00040f 0%, #001d3d 50%, #00ff96 100%);
+        }
+        .score-glow {
+            background: linear-gradient(45deg, #00ff96, #00d4aa, #00ff96);
+            background-size: 300% 300%;
+            animation: gradientShift 3s ease infinite;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        .matrix-rain {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.1;
+        }
+        .scanline {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00ff96, transparent);
+            animation: scan 4s linear infinite;
+        }
+        @keyframes scan {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100vh); }
+        }
+    </style>
+</head>
+<body class="min-h-screen relative gradient-bg">
+    
+    <canvas id="matrixRain" class="matrix-rain"></canvas>
+    
+    <div class="scanline"></div>
+
+    <div class="relative z-10 min-h-screen flex flex-col">
+        <header class="glass p-8 rounded-b-3xl glow-cyan mx-8 mt-8 max-w-7xl mx-auto shadow-2xl">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <div class="w-12 h-12 bg-gradient-to-r from-cyan-400 to-emerald-500 rounded-2xl flex items-center justify-center glow-cyan">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-6 h-6">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-4xl md:text-5xl font-bold font-[Space_Grotesk] bg-gradient-to-r from-cyan-400 via-emerald-400 to-cyan-500 bg-clip-text text-transparent">
+                            GitGrade AI
+                        </h1>
+                        <p class="text-emerald-400 text-sm font-[JetBrains_Mono] tracking-wider">Repository Intelligence Engine</p>
+                    </div>
+                </div>
+                <div class="text-xs text-cyan-400 font-[JetBrains_Mono] tracking-widest opacity-75">
+                    NEURAL ANALYSIS v2.1
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-1 flex flex-col md:flex-row gap-6 p-8 max-w-7xl mx-auto">
+            
+            <div class="flex-1 md:w-1/3 glass p-8 rounded-3xl glow-cyan hover:scale-[1.02] transition-all duration-300">
+                <h2 class="font-[Space_Grotesk] text-2xl font-semibold mb-6 text-cyan-300">Neural Input</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-[JetBrains_Mono] text-cyan-200 mb-2">Repository URL</label>
+                        <input 
+                            type="text" 
+                            id="repoUrl" 
+                            placeholder="https://github.com/user/repo"
+                            class="w-full p-4 bg-black/30 border border-cyan-500/50 rounded-xl font-[JetBrains_Mono] text-lg focus:outline-none focus:border-cyan-400 glow-cyan transition-all duration-300"
+                        >
+                    </div>
+                    <button 
+                        id="analyzeBtn" 
+                        onclick="analyzeRepo()"
+                        class="w-full p-4 bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-emerald-500 hover:to-cyan-500 text-black font-bold rounded-2xl font-[Space_Grotesk] text-lg glow-cyan hover:scale-105 transition-all duration-300 shadow-2xl"
+                    >
+                        🚀 INITIATE ANALYSIS
+                    </button>
+                </div>
+            </div>
+
+            <div id="resultSection" class="hidden flex-1 md:w-2/3 space-y-6">
+                
+                <div class="glass p-8 rounded-3xl glow-cyan relative overflow-hidden">
+                    <div class="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-emerald-500/10"></div>
+                    <div class="relative z-10 flex flex-col md:flex-row items-center justify-between">
+                        <div class="text-center md:text-left">
+                            <p class="text-cyan-400 font-[JetBrains_Mono] text-sm tracking-wider uppercase mb-2">OVERALL INTELLIGENCE</p>
+                            <div class="score-glow text-6xl md:text-7xl font-black font-[Space_Grotesk] mb-2" id="scoreDisplay">0</div>
+                            <div class="flex items-center gap-2">
+                                <span class="px-4 py-1 bg-emerald-500/20 border border-emerald-500/50 rounded-full text-xs font-bold text-emerald-400" id="tierDisplay">—</span>
+                                <span class="text-cyan-400 text-sm font-[JetBrains_Mono]" id="tierSimilarity">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass p-8 rounded-3xl glow-cyan grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <div class="signal-card p-4 rounded-2xl glass hover:glow-cyan transition-all duration-300" data-metric="structure">
+                        <div class="text-cyan-400 text-[10px] font-[JetBrains_Mono] tracking-wider uppercase mb-2">STRUCTURE</div>
+                        <div class="text-2xl font-bold text-white mb-2" data-score="structure">-</div>
+                        <div class="w-full bg-black/50 rounded-full h-2">
+                            <div class="bg-gradient-to-r from-cyan-500 to-emerald-500 h-2 rounded-full transition-all duration-700" data-bar="structure" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="signal-card p-4 rounded-2xl glass hover:glow-cyan transition-all duration-300" data-metric="documentation">
+                        <div class="text-cyan-400 text-[10px] font-[JetBrains_Mono] tracking-wider uppercase mb-2">DOCS</div>
+                        <div class="text-2xl font-bold text-white mb-2" data-score="documentation">-</div>
+                        <div class="w-full bg-black/50 rounded-full h-2">
+                            <div class="bg-gradient-to-r from-cyan-500 to-emerald-500 h-2 rounded-full transition-all duration-700" data-bar="documentation" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="signal-card p-4 rounded-2xl glass hover:glow-cyan transition-all duration-300" data-metric="tests">
+                        <div class="text-cyan-400 text-[10px] font-[JetBrains_Mono] tracking-wider uppercase mb-2">TESTS</div>
+                        <div class="text-2xl font-bold text-white mb-2" data-score="tests">-</div>
+                        <div class="w-full bg-black/50 rounded-full h-2">
+                            <div class="bg-gradient-to-r from-cyan-500 to-emerald-500 h-2 rounded-full transition-all duration-700" data-bar="tests" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="signal-card p-4 rounded-2xl glass hover:glow-cyan transition-all duration-300" data-metric="commits">
+                        <div class="text-cyan-400 text-[10px] font-[JetBrains_Mono] tracking-wider uppercase mb-2">COMMITS</div>
+                        <div class="text-2xl font-bold text-white mb-2" data-score="commits">-</div>
+                        <div class="w-full bg-black/50 rounded-full h-2">
+                            <div class="bg-gradient-to-r from-cyan-500 to-emerald-500 h-2 rounded-full transition-all duration-700" data-bar="commits" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="signal-card p-4 rounded-2xl glass hover:glow-cyan transition-all duration-300" data-metric="dependencies">
+                        <div class="text-cyan-400 text-[10px] font-[JetBrains_Mono] tracking-wider uppercase mb-2">DEPS</div>
+                        <div class="text-2xl font-bold text-white mb-2" data-score="dependencies">-</div>
+                        <div class="w-full bg-black/50 rounded-full h-2">
+                            <div class="bg-gradient-to-r from-cyan-500 to-emerald-500 h-2 rounded-full transition-all duration-700" data-bar="dependencies" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div class="glass p-8 rounded-3xl glow-cyan">
+                        <h3 class="font-[Space_Grotesk] text-xl font-semibold text-cyan-300 mb-4 flex items-center gap-2">
+                            <div class="w-6 h-6 bg-emerald-500/20 rounded-lg flex items-center justify-center text-emerald-400 text-sm font-bold">AI</div>
+                            Analysis Summary
+                        </h3>
+                        <p id="summaryText" class="text-cyan-200 leading-relaxed font-[JetBrains_Mono]"></p>
+                    </div>
+                    <div class="glass p-8 rounded-3xl glow-cyan">
+                        <h3 class="font-[Space_Grotesk] text-xl font-semibold text-cyan-300 mb-4 flex items-center gap-2">
+                            <div class="w-6 h-6 bg-gradient-to-r from-cyan-400 to-emerald-500 rounded-lg flex items-center justify-center text-xs font-bold text-black">AI</div>
+                            Neural Roadmap
+                        </h3>
+                        <div id="roadmapList" class="space-y-3 font-[JetBrains_Mono] text-sm"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <div id="loading" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 hidden">
+            <div class="text-center">
+                <div class="w-20 h-20 border-4 border-cyan-500/30 border-t-cyan-500 rounded-full animate-spin mx-auto mb-6 glow-cyan"></div>
+                <div class="space-y-2">
+                    <div class="flex items-center justify-center gap-2 text-cyan-400 font-[JetBrains_Mono] mb-4">
+                        <div class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                        <span>NEURAL NETWORK ACTIVE</span>
+                        <div class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" style="animation-delay: 0.2s"></div>
+                    </div>
+                    <p class="text-sm text-cyan-500 font-[JetBrains_Mono]">Analyzing repository matrix...</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="errorOverlay" class="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-50 hidden">
+            <div class="glass p-8 rounded-3xl max-w-md w-full mx-4 glow-cyan text-center">
+                <div class="w-16 h-16 bg-red-500/20 border-2 border-red-500/50 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-8 h-8 text-red-400">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <h3 class="font-[Space_Grotesk] text-2xl font-bold text-white mb-4">Analysis Failed</h3>
+                <p id="errorText" class="text-cyan-200 font-[JetBrains_Mono] mb-6"></p>
+                <button onclick="closeError()" class="w-full p-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold rounded-xl glow-cyan transition-all duration-300">
+                    Retry Analysis
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Matrix Rain Background
+        function initMatrixRain() {
+            const canvas = document.getElementById('matrixRain');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            const chars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲンガギグゲゴザジズゼゾダヂヅデドバビブベボパピプペポ';
+            const fontSize = 14;
+            const columns = canvas.width / fontSize;
+            const drops = Array(Math.floor(columns)).fill(1);
+
+            function draw() {
+                ctx.fillStyle = 'rgba(0, 4, 15, 0.05)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = '#00ff96';
+                ctx.font = `${fontSize}px monospace`;
+                
+                drops.forEach((y, i) => {
+                    const text = chars[Math.floor(Math.random() * chars.length)];
+                    ctx.fillText(text, i * fontSize, y * fontSize);
+                    
+                    if (y * fontSize > canvas.height && Math.random() > 0.975) {
+                        drops[i] = 0;
+                    }
+                    drops[i]++;
+                });
+            }
+            setInterval(draw, 50);
+        }
+
+        // Initialize on load
+        window.addEventListener('load', initMatrixRain);
+        window.addEventListener('resize', () => {
+            const canvas = document.getElementById('matrixRain');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        // UI Logic
+        const repoInput = document.getElementById('repoUrl');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const loading = document.getElementById('loading');
+        const resultSection = document.getElementById('resultSection');
+        const errorOverlay = document.getElementById('errorOverlay');
+
+        async function analyzeRepo() {
+            const url = repoInput.value.trim();
+            if (!url) return;
+
+            loading.classList.remove('hidden');
+            resultSection.classList.add('hidden');
+            errorOverlay.classList.add('hidden');
+            analyzeBtn.disabled = true;
+
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ repo_url: url })
+                });
+
+                const data = await response.json();
+
+                if (data.error || data.status === 'error') {
+                    document.getElementById('errorText').textContent = data.error || 'Unknown error';
+                    errorOverlay.classList.remove('hidden');
+                } else {
+                    displayResults(data);
+                    resultSection.classList.remove('hidden');
+                }
+            } catch (err) {
+                document.getElementById('errorText').textContent = 'Network error: ' + err.message;
+                errorOverlay.classList.remove('hidden');
+            } finally {
+                loading.classList.add('hidden');
+                analyzeBtn.disabled = false;
+            }
+        }
+
+        function displayResults(data) {
+            // Score
+            document.getElementById('scoreDisplay').textContent = data.score;
+            
+            // Tier
+            const tierEl = document.getElementById('tierDisplay');
+            tierEl.textContent = data.tier;
+            tierEl.className = `px-4 py-1 bg-emerald-500/20 border border-emerald-500/50 rounded-full text-xs font-bold text-emerald-400`;
+            
+            document.getElementById('tierSimilarity').textContent = `${data.tier_similarity}%`;
+
+            // Metrics
+            Object.entries(data.profile).forEach(([key, score]) => {
+                const scoreEl = document.querySelector(`[data-score="${key}"]`);
+                const barEl = document.querySelector(`[data-bar="${key}"]`);
+                
+                if (scoreEl) scoreEl.textContent = `${score}`;
+                if (barEl) {
+                    const percentage = (score / 20) * 100;
+                    barEl.style.width = `${percentage}%`;
+                }
+            });
+
+            // Summary
+            document.getElementById('summaryText').textContent = data.summary;
+
+            // Roadmap
+            const roadmapList = document.getElementById('roadmapList');
+            roadmapList.innerHTML = '';
+            data.roadmap.forEach(item => {
+                roadmapList.innerHTML += `<div class="flex items-start gap-2 p-3 bg-black/30 rounded-xl hover:bg-black/50 transition-all duration-200">${item}</div>`;
+            });
+        }
+
+        function closeError() {
+            errorOverlay.classList.add('hidden');
+        }
+
+        // Enter key support
+        repoInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') analyzeRepo();
+        });
+
+        // Auto-focus input
+        repoInput.focus();
+    </script>
+</body>
+</html>
